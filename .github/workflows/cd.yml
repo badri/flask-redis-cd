@@ -32,3 +32,20 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/flask-redis:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set kubernetes context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: service-account
+          k8s-url: https://72ad2064-31b4-4552-a630-c88487140b6f.k8s.ondigitalocean.com
+          k8s-secret: ${{ secrets.KUBERNETES_SECRET }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        id: install
+
+      - name: Get namespaces
+        run: |
+          kubectl get ns
