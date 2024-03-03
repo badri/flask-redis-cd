@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-redis
+  template:
+    metadata:
+      labels:
+        app: flask-redis
+    spec:
+      imagePullSecrets:
+      - name: ghcr-creds
+      initContainers:
+        - name: check-redis
+          image: alpine
+          command: ['/bin/sh', '-c', 'apk add --no-cache netcat-openbsd && /usr/local/bin/check-redis.sh']
+          env:
+          - name: REDIS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: REDIS_HOST
+          volumeMounts:
+          - name: redis-check-script
+            mountPath: /usr/local/bin/check-redis.sh
+            subPath: check-redis.sh
+      containers:
+        - name: flask
+          image: ghcr.io/badri/flask-redis:1.0
+          env:
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: flask-config
+                  key: DEBUG
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: flask-config
+                  key: PORT
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: flask-config
+                  key: REDIS_HOST
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDIS_PASSWORD
+          ports:
+            - containerPort: 8080
+      volumes:
+      - name: redis-check-script
+        configMap:
+          name: redis-check
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-redis
+spec:
+  type: ClusterIP
+  selector:
+    app: flask-redis
+  ports:
+    - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flask-redis
+spec:
+  tls:
+  - hosts:
+    - flask-redis.example.com
+    secretName: flask-redis-tls
+  ingressClassName: nginx
+  rules:
+  - host: flask-redis.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flask-redis
+            port:
+              number: 8080
+---

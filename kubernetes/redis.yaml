@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  serviceName: "redis"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      initContainers:
+      - name: volume-permissions
+        image: busybox
+        command: ['sh', '-c', 'chmod -R 777 /data']
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      containers:
+      - name: redis
+        image: redis:7.2.4
+        command: ['/scripts/redis-init.sh']
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-script
+          mountPath: /scripts
+        - name: redis-config
+          mountPath: /tmp/redis/redis.conf
+          subPath: redis.conf
+      volumes:
+      - name: redis-script
+        configMap:
+          name: redis-custom
+          items:
+          - key: redis-init.sh
+            path: redis-init.sh
+          defaultMode: 0755
+      - name: redis-config
+        configMap:
+          name: redis-custom
+          items:
+          - key: redis.conf
+            path: redis.conf
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  clusterIP: None
+  selector:
+    app: redis
+---
+# redis configmap
