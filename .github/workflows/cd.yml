@@ -46,6 +46,11 @@ jobs:
         uses: azure/setup-kubectl@v3
         id: install
 
-      - name: Get namespaces
-        run: |
-          kubectl get ns
+      - name: Deploy to the Kubernetes cluster
+        uses: azure/k8s-deploy@v4
+        with:
+          namespace: dev
+          manifests: |
+            kubernetes/flask.yaml
+          images: |
+            ghcr.io/badri/flask-redis-cd/flask-redis:${{ github.sha }}

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: flask-redis
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: flask-redis
@@ -30,13 +30,8 @@ spec:
             subPath: check-redis.sh
       containers:
         - name: flask
-          image: ghcr.io/badri/flask-redis:1.0
+          image: ghcr.io/badri/flask-redis-cd/flask-redis:ac27ace3481b1b25b7604b480b6185ff42151164
           env:
-            - name: DEBUG
-              valueFrom:
-                configMapKeyRef:
-                  name: flask-config
-                  key: DEBUG
             - name: PORT
               valueFrom:
                 configMapKeyRef:
