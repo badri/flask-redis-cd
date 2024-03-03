@@ -18,5 +18,4 @@ jobs:
           platforms: linux/amd64
           file: ./Dockerfile
           push: true
-          target: prod
           tags: ghcr.io/${{ github.repository }}/flask-redis:${{ github.sha }}
